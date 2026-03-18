@@ -41,6 +41,9 @@ Standards & Protocols is intentionally a standalone zone rather than folded into
 Tool & Integration — its cross-cutting nature means it connects to nearly every 
 other zone, and that relationship becomes more significant as the ecosystem matures.
 
+![Agent-Map preview](preview01.png)
+![Agent-Map info preview](preview02.png)
+
 ## Companion piece
 
 **[Agent-Layers](../Agent-Layers)** covers the same domain as a structured reference 
