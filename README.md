@@ -46,7 +46,7 @@ other zone, and that relationship becomes more significant as the ecosystem matu
 
 ## Companion piece
 
-**[Agent-Layers](../Agent-Layers)** covers the same domain as a structured reference 
+**[Agent-Layers](https://github.com/schema-syntax/Agent-Layers)** covers the same domain as a structured reference 
 tool — 68 concepts organized across eight abstraction layers with expanded definitions, 
 related term navigation, and a study progress tracker. The two artifacts are designed 
 to be used together.
