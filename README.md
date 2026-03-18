@@ -1,7 +1,7 @@
 # Agent-Map
 
 An interactive ecosystem map of agentic AI — nine functional zones, their relationships, 
-and the dependencies between them. Built to complement [Agent-Layers](../Agent-Layers), 
+and the dependencies between them. Built to complement [Agent-Layers](https://github.com/schema-syntax/Agent-Layers), 
 which covers the same domain through a structured, layer-by-layer reference lens.
 
 ## What it is
