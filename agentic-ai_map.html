@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent-Map — Agentic AI Ecosystem</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #e8e4d9;
+    --bg2: #ddd9cd;
+    --surface: #f0ecdf;
+    --border: rgba(80,60,40,0.18);
+    --border-med: rgba(80,60,40,0.32);
+    --text: #2e2318;
+    --text2: #6b5540;
+    --text3: #9a8472;
+    --ink: #3a2a1a;
+    --shadow: 0 2px 12px rgba(60,40,20,0.15);
+    --shadow-lg: 0 8px 32px rgba(60,40,20,0.22);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 0.9rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 10;
+    background: linear-gradient(to bottom, var(--bg) 60%, transparent);
+    pointer-events: none;
+  }
+
+  header h1 {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    text-transform: uppercase;
+  }
+
+  header p {
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.03em;
+  }
+
+  .hint {
+    position: absolute;
+    bottom: 1rem;
+    left: 1.5rem;
+    font-size: 11px;
+    color: var(--text3);
+    z-index: 10;
+    pointer-events: none;
+    letter-spacing: 0.02em;
+  }
+
+  .hint kbd {
+    background: var(--surface);
+    border: 0.5px solid var(--border-med);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px;
+    font-family: inherit;
+    color: var(--text2);
+  }
+
+  #map-svg {
+    width: 100%;
+    height: 100vh;
+    cursor: grab;
+  }
+
+  #map-svg:active { cursor: grabbing; }
+
+  /* Detail panel */
+  .panel {
+    position: absolute;
+    top: 50%;
+    right: 1.5rem;
+    transform: translateY(-50%);
+    width: 260px;
+    background: var(--surface);
+    border: 0.5px solid var(--border-med);
+    border-radius: 10px;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 20;
+    display: none;
+    animation: panelIn 0.18s ease-out;
+  }
+
+  .panel.open { display: block; }
+
+  @keyframes panelIn {
+    from { opacity: 0; transform: translateY(-50%) translateX(12px); }
+    to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+  }
+
+  .panel-close {
+    position: absolute;
+    top: 0.75rem; right: 0.75rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 50%;
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text2);
+    line-height: 1;
+  }
+
+  .panel-close:hover { background: var(--border); }
+
+  .panel-swatch {
+    width: 36px; height: 36px;
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+    border: 0.5px solid rgba(0,0,0,0.12);
+  }
+
+  .panel-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+    letter-spacing: -0.2px;
+  }
+
+  .panel-desc {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-bottom: 0.9rem;
+  }
+
+  .panel-connections-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 6px;
+  }
+
+  .panel-conn-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .panel-conn-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .conn-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .conn-strength {
+    font-size: 10px;
+    color: var(--text3);
+    margin-left: auto;
+  }
+
+  /* Legend */
+  .legend {
+    position: absolute;
+    bottom: 1rem;
+    right: 1.5rem;
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    z-index: 10;
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  .legend-title {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 6px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 4px;
+  }
+
+  .legend-line {
+    height: 2px;
+    border-radius: 1px;
+    background: var(--text2);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Agent-Map</h1>
+    <p>Agentic AI Ecosystem — zone relationships and dependencies</p>
+  </div>
+</header>
+
+<svg id="map-svg"></svg>
+
+<div class="panel" id="panel">
+  <button class="panel-close" id="panel-close">×</button>
+  <div class="panel-swatch" id="panel-swatch"></div>
+  <div class="panel-name" id="panel-name"></div>
+  <div class="panel-desc" id="panel-desc"></div>
+  <div class="panel-connections-label">Connections</div>
+  <div class="panel-conn-list" id="panel-conns"></div>
+</div>
+
+<div class="legend">
+  <div class="legend-title">Connection strength</div>
+  <div class="legend-item"><div class="legend-line" style="width:28px;height:3px;opacity:0.9"></div><span>Strong</span></div>
+  <div class="legend-item"><div class="legend-line" style="width:28px;height:2px;opacity:0.55"></div><span>Medium</span></div>
+  <div class="legend-item"><div class="legend-line" style="width:28px;height:1px;opacity:0.3"></div><span>Low</span></div>
+</div>
+
+<div class="hint">
+  <kbd>scroll</kbd> zoom &nbsp; <kbd>drag</kbd> pan &nbsp; <kbd>click</kbd> zone detail &nbsp; <kbd>Esc</kbd> close
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const ZONES = [
+  {
+    id:"foundation",
+    name:"Foundation Models",
+    color:"#c4943a",
+    fill:"#e8c97a",
+    desc:"The LLM core — the reasoning engine at the heart of every agentic system. Includes proprietary and open-weight models, multimodal capabilities, and the pre-training and alignment processes that shape model behavior.",
+    size: 5
+  },
+  {
+    id:"augmentation",
+    name:"Augmentation",
+    color:"#6b8f5e",
+    fill:"#a8c49a",
+    desc:"Everything that extends what the model knows and remembers — RAG pipelines, embeddings, vector databases, short and long-term memory systems, context management, and knowledge retrieval infrastructure.",
+    size: 4
+  },
+  {
+    id:"orchestration",
+    name:"Orchestration",
+    color:"#b05a32",
+    fill:"#d4916e",
+    desc:"Frameworks and patterns that direct and coordinate agent behavior — planning, ReAct loops, hierarchical agents, multi-agent systems, crew-style architectures, and the logic that sequences tool use and sub-task delegation.",
+    size: 5
+  },
+  {
+    id:"tooling",
+    name:"Tool & Integration",
+    color:"#9a7c2a",
+    fill:"#d4b86a",
+    desc:"The layer where agents connect to the external world — APIs, function calling, browser use, code execution, external services, and the connectors that give agents the ability to take real-world actions.",
+    size: 4
+  },
+  {
+    id:"standards",
+    name:"Standards & Protocols",
+    color:"#7a6040",
+    fill:"#b89870",
+    desc:"The interoperability infrastructure — MCP (Model Context Protocol), A2A (Agent-to-Agent), and ACP (Agent Communication Protocol). Cross-cutting standards that define how agents, tools, and services discover and communicate with each other.",
+    size: 3
+  },
+  {
+    id:"evaluation",
+    name:"Evaluation & Safety",
+    color:"#9e5a5a",
+    fill:"#d4968a",
+    desc:"The governance layer — accuracy checking, safety guardrails, testing pipelines, feedback loops, human oversight, and monitoring. Ensures agents behave correctly, safely, and improves over time based on real-world signals.",
+    size: 4
+  },
+  {
+    id:"deployment",
+    name:"Deployment",
+    color:"#5a7080",
+    fill:"#8aaab8",
+    desc:"How agents are packaged, hosted, and maintained in production — cloud platforms, local runtimes, versioning, update management, and the infrastructure decisions that determine how agents reach the real world.",
+    size: 3
+  },
+  {
+    id:"devtools",
+    name:"Developer Tooling",
+    color:"#6b7a3a",
+    fill:"#a4b072",
+    desc:"The tools developers use to build, debug, and observe agents — IDEs with AI integration, observability platforms, eval harnesses, prompt management tools, and the development workflow infrastructure.",
+    size: 2
+  },
+  {
+    id:"applications",
+    name:"Applications",
+    color:"#8a5a3a",
+    fill:"#c4906a",
+    desc:"The end products and use cases — education bots, HR assistants, customer support, marketing agents, data analysis, legal AI, and the full range of domain-specific applications built on the layers below.",
+    size: 3
+  }
+];
+
+const EDGES = [
+  {source:"foundation",  target:"augmentation",  strength:"strong"},
+  {source:"foundation",  target:"orchestration", strength:"strong"},
+  {source:"foundation",  target:"evaluation",    strength:"strong"},
+  {source:"augmentation",target:"orchestration", strength:"strong"},
+  {source:"orchestration",target:"tooling",      strength:"strong"},
+  {source:"tooling",     target:"standards",     strength:"strong"},
+  {source:"standards",   target:"orchestration", strength:"strong"},
+  {source:"augmentation",target:"tooling",       strength:"medium"},
+  {source:"orchestration",target:"evaluation",   strength:"medium"},
+  {source:"standards",   target:"deployment",    strength:"medium"},
+  {source:"evaluation",  target:"deployment",    strength:"medium"},
+  {source:"deployment",  target:"devtools",      strength:"medium"},
+  {source:"deployment",  target:"applications",  strength:"strong"},
+  {source:"devtools",    target:"orchestration", strength:"medium"},
+  {source:"devtools",    target:"evaluation",    strength:"medium"},
+  {source:"applications",target:"augmentation",  strength:"low"},
+  {source:"applications",target:"tooling",       strength:"low"},
+];
+
+const STRENGTH = { strong: {width:3.5, opacity:0.85}, medium: {width:2, opacity:0.5}, low: {width:1, opacity:0.28} };
+
+const zoneMap = {};
+ZONES.forEach(z => zoneMap[z.id] = z);
+
+const w = window.innerWidth;
+const h = window.innerHeight;
+
+const svg = d3.select('#map-svg')
+  .attr('viewBox', `0 0 ${w} ${h}`);
+
+// Defs — filters for blob softness and texture
+const defs = svg.append('defs');
+
+// Soft glow filter per zone
+ZONES.forEach(z => {
+  const f = defs.append('filter')
+    .attr('id', 'glow-'+z.id)
+    .attr('x', '-40%').attr('y', '-40%')
+    .attr('width', '180%').attr('height', '180%');
+  f.append('feGaussianBlur')
+    .attr('in', 'SourceGraphic')
+    .attr('stdDeviation', '18')
+    .attr('result', 'blur');
+  f.append('feComposite')
+    .attr('in', 'SourceGraphic')
+    .attr('in2', 'blur')
+    .attr('operator', 'over');
+});
+
+// Paper texture filter
+const feTurb = defs.append('filter').attr('id','paper').attr('x','0%').attr('y','0%').attr('width','100%').attr('height','100%');
+feTurb.append('feTurbulence').attr('type','fractalNoise').attr('baseFrequency','0.65').attr('numOctaves','3').attr('stitchTiles','stitch').attr('result','noise');
+feTurb.append('feColorMatrix').attr('type','saturate').attr('values','0').attr('result','grayNoise');
+feTurb.append('feBlend').attr('in','SourceGraphic').attr('in2','grayNoise').attr('mode','multiply').attr('result','blend');
+feTurb.append('feComponentTransfer').attr('in','blend').append('feFuncA').attr('type','linear').attr('slope','1');
+
+// Background rect with subtle texture
+svg.append('rect')
+  .attr('width', w).attr('height', h)
+  .attr('fill', '#e8e4d9');
+
+// Subtle grid lines like old map paper
+const gridG = svg.append('g').attr('opacity', 0.06);
+for(let x = 0; x < w; x += 80){
+  gridG.append('line').attr('x1',x).attr('y1',0).attr('x2',x).attr('y2',h).attr('stroke','#6b4a20').attr('stroke-width',0.5);
+}
+for(let y = 0; y < h; y += 80){
+  gridG.append('line').attr('x1',0).attr('y1',y).attr('x2',w).attr('y2',y).attr('stroke','#6b4a20').attr('stroke-width',0.5);
+}
+
+// Zoom/pan container
+const container = svg.append('g').attr('id','container');
+
+svg.call(d3.zoom()
+  .scaleExtent([0.35, 3])
+  .on('zoom', e => container.attr('transform', e.transform))
+);
+
+// Build node and link data
+const nodes = ZONES.map(z => ({...z}));
+const links = EDGES.map(e => ({...e}));
+
+// D3 force simulation
+const sim = d3.forceSimulation(nodes)
+  .force('link', d3.forceLink(links).id(d=>d.id).distance(d => {
+    const s = d.strength;
+    return s==='strong' ? 180 : s==='medium' ? 240 : 300;
+  }).strength(d => d.strength==='strong' ? 0.6 : d.strength==='medium' ? 0.35 : 0.2))
+  .force('charge', d3.forceManyBody().strength(d => -600 * d.size))
+  .force('center', d3.forceCenter(w/2, h/2))
+  .force('collision', d3.forceCollide().radius(d => 55 * Math.sqrt(d.size) + 20))
+  .force('x', d3.forceX(w/2).strength(0.04))
+  .force('y', d3.forceY(h/2).strength(0.04));
+
+// Edge lines
+const linkG = container.append('g').attr('id','links');
+const linkSel = linkG.selectAll('path')
+  .data(links)
+  .enter().append('path')
+  .attr('fill','none')
+  .attr('stroke', '#6b4a20')
+  .attr('stroke-width', d => STRENGTH[d.strength].width)
+  .attr('stroke-opacity', d => STRENGTH[d.strength].opacity)
+  .attr('stroke-linecap','round');
+
+// Zone blobs
+const nodeG = container.append('g').attr('id','nodes');
+
+const nodeSel = nodeG.selectAll('g.zone')
+  .data(nodes)
+  .enter().append('g')
+  .attr('class','zone')
+  .style('cursor','pointer')
+  .call(d3.drag()
+    .on('start', (e,d) => { if(!e.active) sim.alphaTarget(0.2).restart(); d.fx=d.x; d.fy=d.y; })
+    .on('drag',  (e,d) => { d.fx=e.x; d.fy=e.y; })
+    .on('end',   (e,d) => { if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; })
+  )
+  .on('click', (e,d) => { e.stopPropagation(); openPanel(d); })
+  .on('mouseenter', (e,d) => highlightZone(d.id))
+  .on('mouseleave', () => clearHighlight());
+
+// Outer glow blob (soft, larger)
+nodeSel.append('ellipse')
+  .attr('class','blob-glow')
+  .attr('rx', d => 52 * Math.sqrt(d.size))
+  .attr('ry', d => 44 * Math.sqrt(d.size))
+  .attr('fill', d => d.fill)
+  .attr('opacity', 0.22)
+  .attr('filter', d => `url(#glow-${d.id})`);
+
+// Main blob body — slightly irregular via rx/ry ratio variation
+nodeSel.append('ellipse')
+  .attr('class','blob-body')
+  .attr('rx', d => 42 * Math.sqrt(d.size))
+  .attr('ry', d => 36 * Math.sqrt(d.size))
+  .attr('fill', d => d.fill)
+  .attr('opacity', 0.82)
+  .attr('stroke', d => d.color)
+  .attr('stroke-width', 1.5)
+  .attr('stroke-opacity', 0.6);
+
+// Inner highlight for depth
+nodeSel.append('ellipse')
+  .attr('class','blob-shine')
+  .attr('rx', d => 22 * Math.sqrt(d.size))
+  .attr('ry', d => 14 * Math.sqrt(d.size))
+  .attr('cy', d => -10 * Math.sqrt(d.size) * 0.4)
+  .attr('fill', 'white')
+  .attr('opacity', 0.18);
+
+// Zone label
+nodeSel.append('text')
+  .attr('class','zone-label')
+  .attr('text-anchor','middle')
+  .attr('dy','0.35em')
+  .attr('font-size', d => Math.max(11, 9 + d.size * 1.2))
+  .attr('font-weight','500')
+  .attr('fill', d => d.color)
+  .attr('letter-spacing','0.01em')
+  .text(d => d.name)
+  .each(function(d){
+    // wrap long names
+    const words = d.name.split(' ');
+    if(words.length > 2){
+      const el = d3.select(this);
+      el.text('');
+      const line1 = words.slice(0, Math.ceil(words.length/2)).join(' ');
+      const line2 = words.slice(Math.ceil(words.length/2)).join(' ');
+      el.append('tspan').attr('x',0).attr('dy','-0.6em').text(line1);
+      el.append('tspan').attr('x',0).attr('dy','1.2em').text(line2);
+    }
+  });
+
+// Simulation tick
+sim.on('tick', () => {
+  linkSel.attr('d', d => {
+    const dx = d.target.x - d.source.x;
+    const dy = d.target.y - d.source.y;
+    const dr = Math.sqrt(dx*dx + dy*dy) * 0.6;
+    return `M${d.source.x},${d.source.y} A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+  });
+  nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
+});
+
+// Run sim for a while then cool
+sim.alpha(1).restart();
+setTimeout(() => sim.alphaTarget(0), 3000);
+
+// Highlight on hover
+function highlightZone(id){
+  const connected = new Set([id]);
+  links.forEach(l => {
+    if(l.source.id===id) connected.add(l.target.id);
+    if(l.target.id===id) connected.add(l.source.id);
+  });
+  nodeSel.select('.blob-body').attr('opacity', d => connected.has(d.id) ? 0.92 : 0.22);
+  nodeSel.select('.zone-label').attr('opacity', d => connected.has(d.id) ? 1 : 0.25);
+  linkSel
+    .attr('stroke-opacity', d => (d.source.id===id||d.target.id===id) ? STRENGTH[d.strength].opacity * 1.4 : 0.05)
+    .attr('stroke-width', d => (d.source.id===id||d.target.id===id) ? STRENGTH[d.strength].width * 1.5 : STRENGTH[d.strength].width);
+}
+
+function clearHighlight(){
+  nodeSel.select('.blob-body').attr('opacity', 0.82);
+  nodeSel.select('.zone-label').attr('opacity', 1);
+  linkSel
+    .attr('stroke-opacity', d => STRENGTH[d.strength].opacity)
+    .attr('stroke-width', d => STRENGTH[d.strength].width);
+}
+
+// Panel
+function openPanel(d){
+  const panel = document.getElementById('panel');
+  document.getElementById('panel-swatch').style.background = d.fill;
+  document.getElementById('panel-swatch').style.borderColor = d.color+'66';
+  document.getElementById('panel-name').textContent = d.name;
+  document.getElementById('panel-desc').textContent = d.desc;
+
+  const connList = document.getElementById('panel-conns');
+  connList.innerHTML = '';
+  const conns = links.filter(l => l.source.id===d.id || l.target.id===d.id);
+  conns.forEach(l => {
+    const otherId = l.source.id===d.id ? l.target.id : l.source.id;
+    const other = zoneMap[otherId];
+    const item = document.createElement('div');
+    item.className = 'panel-conn-item';
+    item.innerHTML = `
+      <div class="conn-dot" style="background:${other.fill};border:1px solid ${other.color}66"></div>
+      <span>${other.name}</span>
+      <span class="conn-strength">${l.strength}</span>
+    `;
+    item.style.cursor = 'pointer';
+    item.addEventListener('click', () => openPanel(other));
+    connList.appendChild(item);
+  });
+
+  panel.classList.add('open');
+  highlightZone(d.id);
+}
+
+function closePanel(){
+  document.getElementById('panel').classList.remove('open');
+  clearHighlight();
+}
+
+document.getElementById('panel-close').addEventListener('click', closePanel);
+svg.on('click', closePanel);
+document.addEventListener('keydown', e => { if(e.key==='Escape') closePanel(); });
+
+window.addEventListener('resize', () => {
+  const nw = window.innerWidth, nh = window.innerHeight;
+  svg.attr('viewBox', `0 0 ${nw} ${nh}`);
+});
+</script>
+</body>
+</html>
